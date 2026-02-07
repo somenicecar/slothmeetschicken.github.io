@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Valentine?</title>
+
+<style>
+  body {
+    height: 100vh;
+    margin: 0;
+    background: #0f172a;
+    color: white;
+    font-family: system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 40px;
+  }
+
+  h1 {
+    font-size: 3rem;
+    margin: 0;
+    text-align: center;
+    padding: 0 16px;
+  }
+
+  .btn {
+    padding: 16px 36px;
+    font-size: 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  #yes {
+    background: #4ade80;
+    color: #022c22;
+  }
+
+  #no {
+    background: #f87171;
+    color: #450a0a;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 10;
+  }
+
+  /* Second screen */
+  #loveScreen {
+    display: none;
+    font-size: 4rem;
+    font-weight: 800;
+    text-align: center;
+  }
+
+  .loveText {
+    font-size: 1.4rem;
+    font-weight: 500;
+    opacity: 0.95;
+    max-width: 800px;
+    padding: 0 18px;
+    line-height: 1.35;
+  }
+
+  /* NEW: cute hyperlink styling */
+  .loveText a {
+    color: #f472b6;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: rgba(244, 114, 182, 0.14);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+  }
+
+  .loveText a:hover {
+    text-decoration: underline;
+    background: rgba(244, 114, 182, 0.22);
+  }
+
+  .loveGif {
+    width: 300px;
+    max-width: 80%;
+    border-radius: 18px;
+    box-shadow: 0 14px 30px rgba(0,0,0,.45);
+    animation: popIn .6s ease;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(.6); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  #particles {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 5;
+  }
+
+  .gifParticle {
+    position: absolute;
+    bottom: -90px;
+    animation: floatUp linear forwards;
+    opacity: 0.95;
+    filter: drop-shadow(0 10px 12px rgba(0,0,0,0.35));
+  }
+
+  @keyframes floatUp {
+    from { transform: translateY(0) scale(0.8); opacity: 1; }
+    to   { transform: translateY(-120vh) scale(1.2); opacity: 0; }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- Screen 1 -->
+<div id="askScreen" class="screen">
+  <h1>Will you be my Valentine? 💘</h1>
+  <button id="yes" class="btn">Yes</button>
+</div>
+
+<button id="no" class="btn">No 😈</button>
+
+<!-- Screen 2 -->
+<div id="loveScreen" class="screen">
+  <div>ILY BB 💖</div>
+
+  <!-- UPDATED: Dinner is a hyperlink -->
+  <div class="loveText">
+    See you on Feb 14, 6:30 AM (Singapore time) for
+    <a href="https://fp.sevenrooms.com/explore/rukaboston/reservations/manage/?lang=en&token=Njg5MThkM2FiZjBhZWM1MGM3MGFiZDQ0NzM1ZjgxYWY2ODU0MWZmNDp7ImFjdHVhbF9pZCI6ICJhaE56Zm5ObGRtVnVjbTl2YlhNdGMyVmpkWEpsY2lnTEVodHVhV2RvZEd4dmIzQmZVbVZ6WlhKMllYUnBiMjVCWTNSMVlXd1lnSUNEOUwtRTd3a00iLCAiYWN0dWFsX2NyZWF0ZWRfdGltZXN0YW1wIjogIjE3NjkxNzgxNzQuNzc0ODk2In0%3D" target="_blank" rel="noopener noreferrer">Dinner</a>
+    😌💕
+  </div>
+
+  <img src="wow.gif" class="loveGif" alt="Cute GIF">
+</div>
+
+<!-- Particles -->
+<div id="particles"></div>
+
+<script>
+  const yesBtn = document.getElementById("yes");
+  const noBtn  = document.getElementById("no");
+  const askScreen  = document.getElementById("askScreen");
+  const loveScreen = document.getElementById("loveScreen");
+  const particles  = document.getElementById("particles");
+
+  /* ---------- NO button smooth dodge ---------- */
+  let curX = 0, curY = 0;
+  let targetX = 0, targetY = 0;
+  let animating = false;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function setNoPos(x, y) {
+    noBtn.style.left = `${x}px`;
+    noBtn.style.top  = `${y}px`;
+  }
+
+  function placeNoNextToYes() {
+    const gap = 40;
+    const pad = 16;
+
+    const yesRect = yesBtn.getBoundingClientRect();
+    let x = yesRect.right + gap;
+    let y = yesRect.top + (yesRect.height - noBtn.offsetHeight) / 2;
+
+    x = clamp(x, pad, window.innerWidth  - noBtn.offsetWidth  - pad);
+    y = clamp(y, pad, window.innerHeight - noBtn.offsetHeight - pad);
+
+    curX = targetX = x;
+    curY = targetY = y;
+    setNoPos(curX, curY);
+  }
+
+  function pickRandomTarget() {
+    const pad = 16;
+    const maxX = window.innerWidth  - noBtn.offsetWidth  - pad;
+    const maxY = window.innerHeight - noBtn.offsetHeight - pad;
+
+    targetX = pad + Math.random() * Math.max(0, (maxX - pad));
+    targetY = pad + Math.random() * Math.max(0, (maxY - pad));
+  }
+
+  function animateNo() {
+    if (!animating) return;
+
+    const ease = 0.15;
+    curX += (targetX - curX) * ease;
+    curY += (targetY - curY) * ease;
+
+    setNoPos(curX, curY);
+
+    if (Math.hypot(targetX - curX, targetY - curY) < 1) {
+      animating = false;
+      return;
+    }
+    requestAnimationFrame(animateNo);
+  }
+
+  function dodge() {
+    pickRandomTarget();
+    if (!animating) {
+      animating = true;
+      requestAnimationFrame(animateNo);
+    }
+  }
+
+  window.addEventListener("mousemove", (e) => {
+    const r = noBtn.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) < 140) dodge();
+  });
+
+  noBtn.addEventListener("mouseenter", dodge);
+
+  /* ---------- THREE GIF particle types ---------- */
+  const GIFS = ["pop1.gif", "pop2.gif", "pop3.png"];
+
+  function spawnGifParticle() {
+    const img = document.createElement("img");
+    img.className = "gifParticle";
+    img.src = GIFS[Math.floor(Math.random() * GIFS.length)];
+    img.alt = "particle";
+
+    const size = 50 + Math.random() * 70;          // 50..120 px
+    const left = Math.random() * window.innerWidth;
+    const duration = 3 + Math.random() * 3;        // 3..6 sec
+
+    img.style.width = `${size}px`;
+    img.style.left = `${left}px`;
+    img.style.animationDuration = `${duration}s`;
+
+    particles.appendChild(img);
+    setTimeout(() => img.remove(), duration * 1000);
+  }
+
+  let particleLoop = null;
+
+  function startParticles() {
+    if (particleLoop) return;
+    particleLoop = setInterval(spawnGifParticle, 140);
+  }
+
+  /* ---------- YES click -> second screen ---------- */
+  yesBtn.addEventListener("click", () => {
+    askScreen.style.display = "none";
+    noBtn.style.display = "none";
+    loveScreen.style.display = "flex";
+    startParticles();
+  });
+
+  /* Init placement */
+  requestAnimationFrame(placeNoNextToYes);
+  window.addEventListener("resize", placeNoNextToYes);
+</script>
+
+</body>
+</html>
